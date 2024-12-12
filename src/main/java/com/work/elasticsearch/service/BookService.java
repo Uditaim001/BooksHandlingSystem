@@ -23,61 +23,82 @@ public class BookService {
     }
 
     public Books addBook(Books book) throws IOException {
-        if (book.getId() == null) {
-            book.setId(UUID.randomUUID().toString());
+        try {
+            if (book.getId() == null) {
+                book.setId(UUID.randomUUID().toString());
+            }
+            elasticsearchClient.index(i -> i
+                    .index("books")
+                    .id(book.getId())
+                    .document(book)
+            );
+            return book;
+        } catch (IOException e) {
+            // Log and rethrow exception
+            throw new IOException("Failed to add book to Elasticsearch", e);
         }
-        elasticsearchClient.index(i -> i
-                .index("books")
-                .id(book.getId())
-                .document(book)
-        );
-        return book;
     }
 
     public List<Books> searchBooksByTitle(String title) throws IOException {
-        Query query = MatchQuery.of(m -> m
-                .field("title")
-                .query(title)
-        )._toQuery();
+        try {
+            Query query = MatchQuery.of(m -> m
+                    .field("title")
+                    .query(title)
+            )._toQuery();
 
-        return elasticsearchClient.search(s -> s
-                        .index("books")
-                        .query(query), Books.class)
-                .hits().hits().stream()
-                .map(Hit::source)
-                .collect(Collectors.toList());
+            return elasticsearchClient.search(s -> s
+                            .index("books")
+                            .query(query), Books.class)
+                    .hits().hits().stream()
+                    .map(Hit::source)
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new IOException("Failed to search books by title", e);
+        }
     }
 
     public List<Books> searchBooksByAuthor(String author) throws IOException {
-        Query query = MatchQuery.of(m -> m
-                .field("author")
-                .query(author)
-        )._toQuery();
+        try {
+            Query query = MatchQuery.of(m -> m
+                    .field("author")
+                    .query(author)
+            )._toQuery();
 
-        return elasticsearchClient.search(s -> s
-                        .index("books")
-                        .query(query), Books.class)
-                .hits().hits().stream()
-                .map(Hit::source)
-                .collect(Collectors.toList());
+            return elasticsearchClient.search(s -> s
+                            .index("books")
+                            .query(query), Books.class)
+                    .hits().hits().stream()
+                    .map(Hit::source)
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new IOException("Failed to search books by author", e);
+        }
     }
 
     public List<Books> getAllBooks() throws IOException {
-        return elasticsearchClient.search(s -> s
-                                .index("books")
-                                .query(q -> q.matchAll(m -> m)) // Match all documents
-                        , Books.class)
-                .hits().hits().stream()
-                .map(Hit::source)
-                .collect(Collectors.toList());
+        try {
+            return elasticsearchClient.search(s -> s
+                                    .index("books")
+                                    .query(q -> q.matchAll(m -> m)), // Match all documents
+                            Books.class)
+                    .hits().hits().stream()
+                    .map(Hit::source)
+                    .collect(Collectors.toList());
+        } catch (IOException e) {
+            throw new IOException("Failed to retrieve all books", e);
+        }
     }
 
     public Optional<Books> getBookById(String id) throws IOException {
-        return Optional.ofNullable(
-                elasticsearchClient.get(g -> g
-                                .index("books")
-                                .id(id), Books.class)
-                        .source()
-        );
+        try {
+            return Optional.ofNullable(
+                    elasticsearchClient.get(g -> g
+                                    .index("books")
+                                    .id(id), Books.class)
+                            .source()
+            );
+        } catch (IOException e) {
+            throw new IOException("Failed to retrieve book by ID", e);
+        }
     }
 }

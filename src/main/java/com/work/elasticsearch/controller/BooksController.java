@@ -22,34 +22,55 @@ public class BooksController {
     }
 
     @PostMapping
-    public ResponseEntity<Books> createBook(@RequestBody Books book) throws IOException {
-        Books savedBook = bookService.addBook(book);
-        return ResponseEntity.status(HttpStatus.CREATED).body(savedBook);
+    public ResponseEntity<?> createBook(@RequestBody Books book) {
+        try {
+            Books savedBook = bookService.addBook(book);
+            return ResponseEntity.status(HttpStatus.CREATED).body(savedBook);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to create book: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Books> getBookById(@PathVariable final String id) throws IOException {
-        return bookService.getBookById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<?> getBookById(@PathVariable final String id) {
+        try {
+            return bookService.getBookById(id)
+                    .map(ResponseEntity::ok)
+                    .orElse(ResponseEntity.notFound().build());
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to retrieve book: " + e.getMessage());
+        }
     }
 
     @GetMapping
-    public List<Books> getAllBooks() throws IOException {
-        return bookService.getAllBooks();
+    public ResponseEntity<?> getAllBooks() {
+        try {
+            List<Books> books = bookService.getAllBooks();
+            return ResponseEntity.ok(books);
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Failed to retrieve books: " + e.getMessage());
+        }
     }
 
     @GetMapping("/search")
-    public List<Books> searchBooks(
+    public ResponseEntity<?> searchBooks(
             @RequestParam(required = false) final String title,
             @RequestParam(required = false) final String author
-    ) throws IOException {
-        if (title != null) {
-            return bookService.searchBooksByTitle(title);
-        } else if (author != null) {
-            return bookService.searchBooksByAuthor(author);
+    ) {
+        try {
+            if (title != null) {
+                return ResponseEntity.ok(bookService.searchBooksByTitle(title));
+            } else if (author != null) {
+                return ResponseEntity.ok(bookService.searchBooksByAuthor(author));
+            }
+            return ResponseEntity.ok(Collections.emptyList());
+        } catch (IOException e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Search failed: " + e.getMessage());
         }
-        return Collections.emptyList();
     }
 
 }
